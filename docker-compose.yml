@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  db:
+    # ベースイメージを定義
+    image: mysql:5.7
+    # 環境変数を設定したファイルの読み込み
+    env_file:
+      - ./api/environments/db.env
+    # sequel proとの接続のため、ローカルの4306番をMySQLコンテナの3306番と繋ぐ
+    ports:
+        - "4306:3306"
+    # ホスト側のディレクトリをコンテナで使用（ホストパス:コンテナパス）
+    volumes:
+      - db-data:/var/lib/mysql:cached
+
+  api:
+    build:
+      context: ./api
+    command: /bin/sh -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    env_file:
+      - ./api/environments/db.env
+    volumes:
+      - ./api:/app:cached
+    depends_on:
+      - db
+    ports:
+      - 3000:3000
+
+  front:
+    build:
+      context: ./front
+    command: yarn run dev
+    volumes:
+      - ./front:/app:cached
+    ports:
+      - 8080:3000
+    depends_on:
+      - api
+
+volumes:
+  db-data:
